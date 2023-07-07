@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
 import pymysql
-import csv
+import csv 
 
 # Establish MySQL connection
 connection = pymysql.connect(
@@ -19,17 +19,15 @@ window.title("Database Generator")
 window.geometry("500x700")
 window.configure(bg="#f0f0f0")
 
-
 # Function to handle the "Browse and Append" button click event
 def browse_files():
     file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
     if file_path:
         # Read Excel file into a DataFrame
         df = pd.read_excel(file_path, engine='openpyxl')
-
+        df = df.fillna("NULL") 
         # Check the columns in the DataFrame
-        if all(col in df.columns for col in
-               ['AnimalId', 'Date', 'Hour', 'RuminationTimeInSeconds', 'EatingTimeInSeconds']):
+        if all(col in df.columns for col in ['AnimalId', 'Date', 'Hour', 'RuminationTimeInSeconds', 'EatingTimeInSeconds']):
             # Convert date column to YYYY-MM-DD format
             df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
             # Append DataFrame to master_table
@@ -42,36 +40,39 @@ def browse_files():
         elif df.columns[0] == 'ID':
             # Append DataFrame to master_table_2
             append_to_table1(df, "master_table_2")
-        elif all(col in df.columns for col in
-                 ['Animal_ID', 'Group_ID', 'Date', 'Days_in_Milk', 'Age_Days', 'Lactation_Num',
-                  'RuminationTime(seconds)', 'EatingTime(seconds)']):
+        elif all(col in df.columns for col in ['Animal_ID', 'Group_ID', 'Date', 'Days_in_Milk', 'Age_Days', 'Lactation_Num', 'RuminationTime(seconds)', 'EatingTime(seconds)']):
             # Convert date column to YYYY-MM-DD format
             df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
             # Append DataFrame to master_table_3
             append_to_table(df, "master_table_3")
         elif df.columns[2] == "Farm_Name":
-            # Extract the date part from 'Start_Time' column
-            df['Date'] = pd.to_datetime(df['Start_Time']).dt.date
-            # Convert date column to YYYY-MM-DD format
-            df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
-            # Append DataFrame to master_table_4
-            append_to_table(df, "master_table_4")
+             # Extract the date part from 'Start_Time' column
+             df['Date'] = pd.to_datetime(df['Start_Time']).dt.date
+             # Convert date column to YYYY-MM-DD format
+             df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+             # Append DataFrame to master_table_4
+             append_to_table(df, "master_table_4")
         elif df.columns[0] == 'Cow':
             # Extract the desired columns and rename them
             data_subset = df[['Cow', 'Date', 'DM Consumed']]
-            data_subset.rename(columns={'Cow': 'Cow_id', "DM Consumed": "DM_Consumed"}, inplace=True)
+            data_subset.rename(columns={'Cow': 'Cow_id', "DM Consumed" : "DM_Consumed" }, inplace=True)
             # Convert date column to YYYY-MM-DD format
             data_subset['Date'] = pd.to_datetime(data_subset['Date']).dt.strftime('%Y-%m-%d')
             # Append DataFrame to master_table_5
             append_to_table(data_subset, "master_table_5")
-
+        elif df.columns[13] == 'Total VFA':
+            #Extract the desired columnds and remane them
+            df.rename(columns={'Group': "Group_ID", "cowID": "Cow_id", "Valeric acid_mM": "Valeric_acid_mM", "Total VFA": "Total_VFA", "Valeric acid_prop": "Valeric_acid_prop"})
+            #Convert date column to YYYY-MM-DD formate
+            df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+            # Append DataFrame to master_table_6
+            append_to_table(df, "master_table_6")
 
         else:
             result_label.config(text="Invalid file format.", fg="red")
             return
 
         result_label.config(text="File appended successfully.", fg="green")
-
 
 # Function to append DataFrame to a specified table
 def append_to_table(df, table_name):
@@ -99,8 +100,10 @@ def append_to_table(df, table_name):
             elif table_name == "master_table_5":
                 sql = "INSERT INTO master_table_5 (Cow_id, Date, DM_Consumed) VALUES (%s, %s, %s)"
                 cursor.execute(sql, row)
+            elif table_name == "master_table_6":
+                sql = "INSERT INTO master_table_6 (Sample, Farm, Date, Cow_id, Cluster, Timepoint, Rep, Acetic_mM, Propionic_mM, Isobutyric_mM, Butyric_mM, Isovaleric_mM, Valeric_acid_mM, Total_VFA, Acetic_prop, Propionic_prop, Isobutyric_prop, Butyric_prop, Isovaleric_prop, Valeric_acid_prop) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                cursor.execute(sql, row)
     connection.commit()
-
 
 def append_to_table1(df, table_name):
     # Replace NaN values with None
@@ -123,7 +126,8 @@ def append_to_table1(df, table_name):
                 cursor.execute(sql, row)
     connection.commit()
 
-J
+
+
 # Function to export master_data table as CSV file
 def export_as_csv():
     # Query the master_data table
@@ -133,16 +137,9 @@ def export_as_csv():
         data = cursor.fetchall()
 
     # Convert query result to DataFrame
-    df = pd.DataFrame(data,
-                      columns=['Cow_id', 'Date', 'Hour', 'RuminationTimeInSeconds', 'EatingTimeInSeconds', 'Motion',
-                               'MotionHeatIndicator', 'MilkWeights', 'Group_id', 'DaysInMilk', 'AgeInDays',
-                               'LactationNum',
-                               'RFID', 'Farm_Name', 'FID', 'Start_Time', 'End_Time', 'Good_Data_Duration',
-                               'Hour_Of_Day', 'CO2_Massflow', 'CH4_Massflow', 'O2_Massflow', 'H2_Massflow',
-                               'H2S_Massflow', 'Average_Airflow', 'Airflow_CF', 'Average_Wind_Speed',
-                               'Average_Wind_Direction', 'Wind_CF', 'Was_Interrupted', 'Interrupting_Tags',
-                               'Midpoint_Since_Last', 'Midpoint_Until_Next', 'Standard_Deviation_of_CH4_Baseline',
-                               'Pipe_Temperature', 'Gas_Temperature', 'RID', 'Farm', 'DM_Consumed'])
+    df = pd.DataFrame(data, columns=['Cow_id', 'Date', 'Hour', 'RuminationTimeInSeconds', 'EatingTimeInSeconds', 'Motion', 'MotionHeatIndicator', 'MilkWeights', 'Group_id', 'DaysInMilk', 'AgeInDays', 'LactationNum', 
+'RFID', 'Farm_Name', 'FID', 'Start_Time', 'End_Time', 'Good_Data_Duration', 'Hour_Of_Day', 'CO2_Massflow', 'CH4_Massflow', 'O2_Massflow', 'H2_Massflow', 'H2S_Massflow', 'Average_Airflow', 'Airflow_CF', 'Average_Wind_Speed', 'Average_Wind_Direction', 'Wind_CF', 'Was_Interrupted', 'Interrupting_Tags', 'Midpoint_Since_Last', 'Midpoint_Until_Next', 'Standard_Deviation_of_CH4_Baseline', 'Pipe_Temperature', 'Gas_Temperature', 'RID', 'Farm', 'DM_Consumed', 
+'Sample', 'Cluster', 'Timepoint', 'Rep', 'Acetic_mM', 'Propionic_mM', 'Isobutyric_mM', 'Butyric_mM', 'Isovaleric_mM','Valeric_acid_mM', 'Total_VFA', 'Acetic_prop', 'Propionic_prop','Isobutyric_prop', 'Butyric_prop', 'Isovaleric_prop', 'Valeric_acid_prop'])
 
     # Prompt user to select the save location for the CSV file
     file_path = filedialog.asksaveasfilename(defaultextension='.csv', filetypes=[('CSV Files', '*.csv')])
@@ -153,7 +150,6 @@ def export_as_csv():
         result_label.config(text="Data exported successfully.", fg="green")
     else:
         result_label.config(text="Export cancelled.", fg="red")
-
 
 # Function to Merge the SQL query
 def execute_query():
@@ -299,7 +295,56 @@ def execute_query():
             FROM
                 master_table_5 mt5
             ON DUPLICATE KEY UPDATE
-                DM_Consumed = mt2.DM_Consumed
+                DM_Consumed = mt5.DM_Consumed
+        """)
+
+        # Insert values from master_table_6
+        cursor.execute("""
+            INSERT INTO master_table_6 (Sample, Farm, Date, Cow_id, Cluster, Timepoint, Rep, Acetic_mM, Propionic_mM, Isobutyric_mM, Butyric_mM, Isovaleric_mM, Valeric_acid_mM, Total_VFA, Acetic_prop, Propionic_prop, Isobutyric_prop, Butyric_prop, Isovaleric_prop, Valeric_acid_prop) 
+            SELECT
+                mt6.Sample, 
+                mt6.Farm, 
+                mt6.Date,
+                mt6.Cow_id,
+                mt6.Cluster,
+                mt6.Timepoint,
+                mt6.Rep,
+                mt6.Acetic_mM,
+                mt6.Propionic_mM,
+                mt6.Isobutyric_mM,
+                mt6.Butyric_mM,
+                mt6.Isovaleric_mM,
+                mt6.Valeric_acid_mM,
+                mt6.Total_VFA,
+                mt6.Acetic_prop,
+                mt6.Propionic_prop,
+                mt6.Isobutyric_prop,
+                mt6.Butyric_prop,
+                mt6.Isovaleric_prop,
+                mt6.Valeric_acid_prop
+            FROM
+                master_table_6 mt6
+            ON DUPLICATE KEY UPDATE
+                Sample = mt6.Sample, 
+                Farm = mt6.Farm, 
+                Date = mt6.Date,
+                Cow_id = mt6.Cow_id,
+                Cluster = mt6.Cluster,
+                Timepoint = mt6.Timepoint,
+                Rep = mt6.Rep,
+                Acetic_mM = mt6.Acetic_mM,
+                Propionic_mM = mt6.Propionic_mM,
+                Isobutyric_mM = mt6.Isobutyric_mM,
+                Butyric_mM = mt6.Butyric_mM,
+                Isovaleric_mM = mt6.Isovaleric_mM,
+                Valeric_acid_mM = mt6.Valeric_acid_mM,
+                Total_VFA = mt6.Total_VFA,
+                Acetic_prop = mt6.Acetic_prop,
+                Propionic_prop = mt6.Propionic_prop,
+                Isobutyric_prop = mt6.Isobutyric_prop,
+                Butyric_prop = mt6.Butyric_prop,
+                Isovaleric_prop = mt6.Isovaleric_prop,
+                Valeric_acid_prop = mt6.Valeric_acid_prop
         """)
 
         # Delete duplicate rows from master_data
@@ -317,6 +362,8 @@ def execute_query():
 
         connection.commit()
         result_label.config(text="Query executed successfully.", fg="green")
+
+
 
 
 def export_csv():
@@ -362,6 +409,9 @@ def export_csv():
     result_label.config(text="Select Data Export is complete.", fg="green")
     connection.commit()
 
+    
+
+
 
 # Date range input fields
 start_date_label = tk.Label(window, text="Start Date:")
@@ -392,35 +442,39 @@ column_names = [
     "Average_Wind_Speed", "Average_Wind_Direction", "Wind_CF", "Was_Interrupted",
     "Interrupting_Tags", "Midpoint_Since_Last", "Midpoint_Until_Next",
     "Standard_Deviation_of_CH4_Baseline", "Pipe_Temperature", "Gas_Temperature",
-    "RID", "Farm", "DM_Consumed"
+    "RID", "DM_Consumed", 'Sample', 'Date', 'Farm', 'Cluster', 'Timepoint', 'Rep',
+    'Acetic_mM', 'Propionic_mM', 'Isobutyric_mM', 'Butyric_mM', 'Isovaleric_mM',
+    'Valeric_acid_mM', 'Total_VFA', 'Acetic_prop', 'Propionic_prop',
+    'Isobutyric_prop', 'Butyric_prop', 'Isovaleric_prop', 'Valeric_acid_prop'
 ]
 
 for column in column_names:
     column_listbox.insert(tk.END, column)
 
 # Export button
-export_button = tk.Button(window, text="Export selected data", command=export_csv, padx=10, pady=5, bg="#4caf50",
-                          fg="black", width=20)
+export_button = tk.Button(window, text="Export selected data", command=export_csv, padx=10, pady=5, bg="#4caf50", fg="black", width=20)
 export_button.pack(pady=10)
 
+
+
 # Create "Browse and Append" button
-browse_button = tk.Button(window, text="Browse and Append", command=browse_files, padx=10, pady=5, bg="#4caf50",
-                          fg="black", width=20)
+browse_button = tk.Button(window, text="Browse and Append", command=browse_files, padx=10, pady=5, bg="#4caf50", fg="black", width=20)
 browse_button.pack(pady=10)
 
 # Create "Execute Query" button
-execute_button = tk.Button(window, text="Merge", command=execute_query, padx=10, pady=5, bg="#4caf50", fg="black",
-                           width=20)
+execute_button = tk.Button(window, text="Merge", command=execute_query, padx=10, pady=5, bg="#4caf50", fg="black", width=20)
 execute_button.pack(pady=10)
 
+
 # Create "Export as CSV" button
-export_button = tk.Button(window, text="Export Master Data", command=export_as_csv, padx=10, pady=5, bg="#4caf50",
-                          fg="black", width=20)
+export_button = tk.Button(window, text="Export Master Data", command=export_as_csv, padx=10, pady=5, bg="#4caf50", fg="black", width=20)
 export_button.pack(pady=10)
 
 # Create result label
 result_label = tk.Label(window, text="", fg="black")
 result_label.pack(pady=10)
+
+
 
 # Run the Tkinter event loop
 window.mainloop()
